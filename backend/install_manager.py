@@ -9,11 +9,7 @@ from typing import Dict, List, Optional
 import requests
 
 from .state_manager import InstalledFile, InstalledMod, StateManager
-from .thunderstore import (
-    ThunderstoreError,
-    get_package,
-    latest_version,
-)
+from .thunderstore import ThunderstoreError, get_package, latest_version
 
 MELON_LOADER_PREFIX = "LavaGang-MelonLoader"
 
@@ -45,8 +41,18 @@ class InstallManager:
         if self.state_manager.is_blacklisted(namespace, name):
             raise InstallError("Mod is blacklisted. Whitelist it to install.")
 
-        package = get_package(namespace, name)
+        try:
+            package = get_package(namespace, name)
+        except ThunderstoreError as exc:
+            raise InstallError(f"Failed to fetch package metadata: {exc}") from exc
         version_info = self._select_version(package, version)
+
+        existing = self.state_manager.get_installed_mod(namespace, name)
+        if existing and existing.version == version_info.get("version_number"):
+            return existing
+        if existing:
+            self._remove_installed_files(existing)
+            self.state_manager.uninstall_mod(namespace, name)
 
         dependencies = [
             dep
@@ -54,12 +60,11 @@ class InstallManager:
             if not dep.startswith(MELON_LOADER_PREFIX)
         ]
 
-        installed_dependencies: List[InstalledMod] = []
         for dep in dependencies:
             dep_namespace, dep_name, *_ = dep.split("-")
             if self.state_manager.get_installed_mod(dep_namespace, dep_name):
                 continue
-            installed_dependencies.append(self.install(dep_namespace, dep_name))
+            self.install(dep_namespace, dep_name)
 
         download_url = version_info["download_url"]
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -88,16 +93,11 @@ class InstallManager:
         return mod
 
     def uninstall(self, namespace: str, name: str) -> None:
-        mod = self.state_manager.uninstall_mod(namespace, name)
+        mod = self.state_manager.get_installed_mod(namespace, name)
         if not mod:
             return
-        game_dir = self.game_directory
-        if game_dir is None:
-            return
-        for installed_file in mod.installed_files:
-            target = game_dir / installed_file.relative_path
-            if target.exists():
-                target.unlink()
+        self._remove_installed_files(mod)
+        self.state_manager.uninstall_mod(namespace, name)
 
     def _select_version(self, package: Dict, version: Optional[str]) -> Dict:
         if version:
@@ -108,7 +108,10 @@ class InstallManager:
         return latest_version(package)
 
     def _download_file(self, url: str, destination: Path) -> None:
-        response = requests.get(url, stream=True)
+        try:
+            response = requests.get(url, stream=True, timeout=60)
+        except requests.RequestException as exc:
+            raise InstallError(f"Failed to download package: {exc}") from exc
         if response.status_code != 200:
             raise InstallError(f"Failed to download package: {response.status_code}")
         with destination.open("wb") as f:
@@ -150,3 +153,31 @@ class InstallManager:
             # If no explicit mods/plugins directories were found, copy everything into Mods.
             copy_contents(extracted_dir, mods_folder)
         return installed_files
+
+    def _remove_installed_files(self, mod: InstalledMod) -> None:
+        game_dir = self.game_directory
+        if game_dir is None:
+            return
+        for installed_file in mod.installed_files:
+            relative_path = (
+                installed_file.relative_path
+                if isinstance(installed_file, InstalledFile)
+                else getattr(installed_file, "relative_path", str(installed_file))
+            )
+            target = game_dir / relative_path
+            if target.exists():
+                if target.is_file():
+                    target.unlink()
+                elif target.is_dir():
+                    shutil.rmtree(target)
+                self._cleanup_empty_parents(target.parent, game_dir)
+
+    def _cleanup_empty_parents(self, path: Path, game_dir: Path) -> None:
+        stop_paths = {game_dir, game_dir / "Mods", game_dir / "Plugins"}
+        current = path
+        while current not in stop_paths:
+            try:
+                current.rmdir()
+            except OSError:
+                break
+            current = current.parent

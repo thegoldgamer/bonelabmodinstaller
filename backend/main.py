@@ -13,6 +13,7 @@ from .thunderstore import (
     ThunderstoreError,
     format_dependency,
     get_package,
+    latest_version,
     search_packages,
 )
 
@@ -21,8 +22,7 @@ app = FastAPI(title="BONELAB Mod Manager API")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["*"]
-    ,
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -77,6 +77,19 @@ class InstalledModModel(BaseModel):
     icon: Optional[str]
     dependencies: List[str]
     installed_files: List[InstalledFileModel]
+
+
+class SettingsResponse(BaseModel):
+    game_directory: Optional[str]
+
+
+class NotificationModel(BaseModel):
+    namespace: str
+    name: str
+    display_name: str
+    icon: Optional[str]
+    current_version: str
+    latest_version: str
 
 
 def map_package_to_summary(package: Dict) -> ModSummary:
@@ -200,30 +213,43 @@ def set_game_directory(request: GameDirectoryRequest):
     return {"status": "ok"}
 
 
-@app.get("/api/settings")
+@app.get("/api/settings", response_model=SettingsResponse)
 def get_settings():
-    return {"game_directory": state_manager.state.game_directory}
+    return SettingsResponse(game_directory=state_manager.get_game_directory())
 
 
-@app.get("/api/notifications")
-def get_notifications():
-    notifications = []
+def _build_notification(mod: InstalledMod) -> Optional[NotificationModel]:
+    try:
+        package = get_package(mod.namespace, mod.name)
+    except ThunderstoreError:
+        return None
+
+    try:
+        latest = latest_version(package)
+    except ThunderstoreError:
+        return None
+
+    latest_version_number = latest.get("version_number")
+    if not latest_version_number or latest_version_number == mod.version:
+        return None
+
+    return NotificationModel(
+        namespace=mod.namespace,
+        name=mod.name,
+        display_name=package.get("display_name", mod.display_name),
+        icon=package.get("icon", mod.icon),
+        current_version=mod.version,
+        latest_version=latest_version_number,
+    )
+
+
+@app.get("/api/notifications", response_model=List[NotificationModel])
+def list_notifications():
+    notifications: List[NotificationModel] = []
     for mod in state_manager.list_installed_mods():
-        try:
-            package = get_package(mod.namespace, mod.name)
-        except ThunderstoreError:
-            continue
-        latest = package.get("versions", [{}])[0]
-        latest_version = latest.get("version_number")
-        if latest_version and latest_version != mod.version:
-            notifications.append(
-                {
-                    "namespace": mod.namespace,
-                    "name": mod.name,
-                    "display_name": mod.display_name,
-                    "icon": mod.icon,
-                    "current_version": mod.version,
-                    "latest_version": latest_version,
-                }
-            )
+        notification = _build_notification(mod)
+        if notification:
+            notifications.append(notification)
     return notifications
+
+

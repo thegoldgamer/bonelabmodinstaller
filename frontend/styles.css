@@ -32,7 +32,10 @@ input {
 .app {
   position: relative;
   min-height: 100vh;
-  overflow: hidden;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
 }
 
 .top-bar {
@@ -195,7 +198,9 @@ input {
 }
 
 .content {
-  padding: 32px min(6vw, 80px);
+  flex: 1;
+  width: 100%;
+  padding: 32px clamp(24px, 6vw, 96px);
   margin-top: 24px;
 }
 

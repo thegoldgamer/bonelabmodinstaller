@@ -6,25 +6,29 @@ from typing import Dict, List, Optional
 import requests
 
 THUNDERSTORE_BASE = "https://thunderstore.io/api/experimental/package"
+REQUEST_TIMEOUT = 30
 
 
 class ThunderstoreError(RuntimeError):
     pass
 
 
-def _handle_response(response: requests.Response) -> Dict:
+def _get(url: str) -> requests.Response:
+    try:
+        response = requests.get(url, timeout=REQUEST_TIMEOUT)
+    except requests.RequestException as exc:
+        raise ThunderstoreError(f"Thunderstore request failed: {exc}") from exc
     if response.status_code != 200:
         raise ThunderstoreError(
             f"Thunderstore API error ({response.status_code}): {response.text}"
         )
-    return response.json()
+    return response
 
 
 @lru_cache(maxsize=1)
 def fetch_all_packages() -> List[Dict]:
-    response = requests.get(f"{THUNDERSTORE_BASE}/")
-    data = _handle_response(response)
-    return data
+    response = _get(f"{THUNDERSTORE_BASE}/")
+    return response.json()
 
 
 def search_packages(query: Optional[str] = None) -> List[Dict]:
@@ -43,8 +47,8 @@ def search_packages(query: Optional[str] = None) -> List[Dict]:
 
 
 def get_package(namespace: str, name: str) -> Dict:
-    response = requests.get(f"{THUNDERSTORE_BASE}/{namespace}/{name}/")
-    return _handle_response(response)
+    response = _get(f"{THUNDERSTORE_BASE}/{namespace}/{name}/")
+    return response.json()
 
 
 def latest_version(package: Dict) -> Dict:
@@ -55,4 +59,10 @@ def latest_version(package: Dict) -> Dict:
 
 
 def format_dependency(dep: str) -> str:
-    return dep.split("-")[0] + "." + dep.split("-")[1] if "-" in dep else dep
+    if "-" not in dep:
+        return dep
+    parts = dep.split("-")
+    if len(parts) < 2:
+        return dep
+    namespace, name = parts[0], parts[1]
+    return f"{namespace}.{name}"

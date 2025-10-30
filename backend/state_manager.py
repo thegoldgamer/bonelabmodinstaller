@@ -99,6 +99,9 @@ class StateManager:
         self._state.game_directory = path
         self.save()
 
+    def get_game_directory(self) -> Optional[str]:
+        return self._state.game_directory
+
     def install_mod(self, mod: InstalledMod) -> None:
         key = f"{mod.namespace}.{mod.name}"
         self._state.installed_mods[key] = mod
