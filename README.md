@@ -19,6 +19,12 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
 pip install fastapi==0.110.0 "uvicorn[standard]==0.27.0" requests==2.31.0 python-multipart==0.0.9
+uvicorn main:app --reload
+```
+
+If you prefer to stay in the repository root instead of `cd backend`, launch Uvicorn with an explicit module path:
+
+```bash
 uvicorn backend.main:app --reload
 ```
 
