@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BONELAB Mod Manager</title>
+    <link rel="stylesheet" href="styles.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="app" class="app">
+      <div class="overlay hidden" id="page-overlay"></div>
+      <header class="top-bar">
+        <button id="hamburger" class="hamburger" aria-label="Toggle menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div class="search-container">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Search mods"
+            autocomplete="off"
+          />
+          <button id="search-button" class="search-button">Search</button>
+        </div>
+        <button class="notification-button" id="notification-button" aria-label="Notifications">
+          <span class="bell-icon">🔔</span>
+          <span class="notification-dot hidden" id="notification-count"></span>
+        </button>
+      </header>
+
+      <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+          <button class="sidebar-link active" data-tab="browse">Browse</button>
+          <button class="sidebar-link" data-tab="blacklist">Blacklist</button>
+          <button class="sidebar-link" data-tab="installed">Installed</button>
+        </nav>
+        <div class="sidebar-spacer"></div>
+        <button class="sidebar-link" data-tab="settings">Settings</button>
+      </aside>
+
+      <main class="content" id="content">
+        <section class="page active" data-page="browse">
+          <div class="mod-grid" id="browse-grid"></div>
+          <div class="loading-indicator hidden" id="browse-loading">Loading mods…</div>
+        </section>
+        <section class="page" data-page="installed">
+          <div class="mod-grid" id="installed-grid"></div>
+          <div class="empty-state hidden" id="installed-empty">
+            No mods installed yet.
+          </div>
+        </section>
+        <section class="page" data-page="blacklist">
+          <div class="blacklist-container" id="blacklist-list"></div>
+          <div class="empty-state hidden" id="blacklist-empty">No blacklisted mods.</div>
+        </section>
+        <section class="page" data-page="settings">
+          <div class="settings-card">
+            <h2>Game Directory</h2>
+            <p>Set your BONELAB installation folder so mods can be installed.</p>
+            <label for="game-directory-input">Path</label>
+            <input id="game-directory-input" type="text" placeholder="C:\\Program Files\\Steam\\steamapps\\common\\BONELAB" />
+            <div class="settings-actions">
+              <button id="save-settings" class="primary">Save</button>
+            </div>
+            <div class="settings-status" id="settings-status"></div>
+          </div>
+        </section>
+      </main>
+
+      <div class="mod-detail hidden" id="mod-detail">
+        <div class="mod-detail-header">
+          <img id="detail-thumbnail" alt="Mod thumbnail" />
+          <div class="mod-detail-info">
+            <h2 id="detail-title"></h2>
+            <p id="detail-author"></p>
+            <p class="detail-downloads" id="detail-downloads"></p>
+          </div>
+          <button class="close-detail" id="close-detail" aria-label="Close">✕</button>
+        </div>
+        <div class="mod-detail-body">
+          <div class="mod-detail-description" id="detail-description"></div>
+        </div>
+        <div class="mod-detail-actions">
+          <button id="detail-blacklist" class="secondary">Blacklist</button>
+          <div class="progress-container hidden" id="install-progress">
+            <div class="progress-bar" id="install-progress-bar"></div>
+          </div>
+          <button id="detail-install" class="primary">Install</button>
+        </div>
+      </div>
+
+      <div class="notification-panel hidden" id="notification-panel">
+        <h3>Updates Available</h3>
+        <div class="notification-list" id="notification-list"></div>
+      </div>
+    </div>
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
