@@ -5,17 +5,30 @@ from typing import Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .install_manager import InstallError, InstallManager
-from .state_manager import InstalledMod, StateManager
-from .thunderstore import (
-    ThunderstoreError,
-    format_dependency,
-    get_package,
-    latest_version,
-    search_packages,
-)
+try:  # pragma: no cover - allow running as a module or package
+    from .install_manager import InstallError, InstallManager
+    from .state_manager import InstalledMod, StateManager
+    from .thunderstore import (
+        ThunderstoreError,
+        format_dependency,
+        get_package,
+        latest_version,
+        search_packages,
+    )
+except ImportError:  # pragma: no cover - fallback for `python -m backend`
+    from install_manager import InstallError, InstallManager
+    from state_manager import InstalledMod, StateManager
+    from thunderstore import (
+        ThunderstoreError,
+        format_dependency,
+        get_package,
+        latest_version,
+        search_packages,
+    )
 
 app = FastAPI(title="BONELAB Mod Manager API")
 
@@ -251,5 +264,19 @@ def list_notifications():
         if notification:
             notifications.append(notification)
     return notifications
+
+
+FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+
+if FRONTEND_DIR.exists():
+    app.mount(
+        "/app",
+        StaticFiles(directory=FRONTEND_DIR, html=True),
+        name="frontend",
+    )
+
+    @app.get("/", include_in_schema=False)
+    async def serve_frontend_root():
+        return RedirectResponse(url="/app/")
 
 

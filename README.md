@@ -19,16 +19,16 @@ cd backend
 python -m venv .venv
 source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
 pip install fastapi==0.110.0 "uvicorn[standard]==0.27.0" requests==2.31.0 python-multipart==0.0.9
-uvicorn main:app --reload
+python -m backend --reload
 ```
 
-If you prefer to stay in the repository root instead of `cd backend`, launch Uvicorn with an explicit module path:
+`python -m backend` ensures the package-relative imports resolve correctly on every platform (particularly on Windows PowerShell and Command Prompt). If you prefer to stay in the repository root instead of `cd backend`, launch Uvicorn with an explicit module path:
 
 ```bash
 uvicorn backend.main:app --reload
 ```
 
-The API is now available at `http://localhost:8000`.
+The API is now available at `http://localhost:8000` and the bundled frontend is served from `http://localhost:8000/app/`.
 
 ### Frontend setup
 
@@ -47,6 +47,28 @@ Open `http://localhost:5173` in your browser. By default the frontend expects th
 </script>
 <script type="module" src="app.js"></script>
 ```
+
+### Desktop launcher (optional)
+
+You can embed the backend and frontend inside a lightweight desktop shell using [pywebview](https://pywebview.flowrl.com/):
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+pip install fastapi==0.110.0 "uvicorn[standard]==0.27.0" requests==2.31.0 python-multipart==0.0.9 pywebview==4.4.1
+deactivate
+cd ..
+python desktop_launcher.py
+```
+
+When you are ready to distribute a Windows executable, install `pyinstaller` and bundle the project. The command below copies the frontend assets into the executable bundle:
+
+```bash
+pyinstaller desktop_launcher.py --name BonelabModManager --noconsole --add-data "frontend/*;frontend"
+```
+
+The generated installer will launch the backend on a loopback port and render the web UI inside a native window.
 
 ## Key features
 
