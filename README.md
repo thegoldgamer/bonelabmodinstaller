@@ -17,15 +17,8 @@ A desktop-friendly web experience for browsing and managing BONELAB mods with Th
 ```bash
 cd backend
 python -m venv .venv
-source .venv/bin/activate  # On Windows use `.venv\\Scripts\\activate`
-pip install -r <(python - <<'PY'
-import tomllib
-from pathlib import Path
-pyproject = tomllib.loads(Path('pyproject.toml').read_text())
-deps = pyproject['tool']['poetry']['dependencies']
-print('\n'.join(f"{key}{'=='+value if isinstance(value, str) and key != 'python' else ''}" for key, value in deps.items() if key != 'python'))
-PY
-)
+source .venv/bin/activate  # On Windows use `.venv\Scripts\activate`
+pip install fastapi==0.110.0 "uvicorn[standard]==0.27.0" requests==2.31.0 python-multipart==0.0.9
 uvicorn backend.main:app --reload
 ```
 
